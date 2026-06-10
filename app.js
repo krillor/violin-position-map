@@ -152,17 +152,16 @@ function noteLabelToPc(label) {
   return ((LETTER_PC[letter] + accidental) % 12 + 12) % 12;
 }
 
-// 某弦上、某把位的 4 个音（1~4 指）：取半音偏移 >= 2p-1 的最低音及其后 3 个音阶音
+// 某弦上、某把位的 4 个音（1~4 指）：
+// 第 n 把位的一指按空弦上方第 n 个音阶音，依次取 4 个连续音阶音
 function stringNotesForPosition(stringPc, scale, position) {
-  const startSemi = 2 * position - 1;
   const all = [];
-  for (let offset = 1; offset <= startSemi + 14 && all.length < 24; offset += 1) {
+  for (let offset = 1; all.length < position + 4; offset += 1) {
     const pc = (stringPc + offset) % 12;
     const note = scale.find((n) => n.pc === pc);
     if (note) all.push({ ...note, offset });
   }
-  const startIndex = all.findIndex((n) => n.offset >= startSemi);
-  return all.slice(startIndex, startIndex + 4);
+  return all.slice(position - 1, position + 3);
 }
 
 function escapeXml(text) {
