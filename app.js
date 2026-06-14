@@ -85,6 +85,43 @@ const KEY_COLORS = [
   "#8a6a39",
 ];
 
+const KEY_SIGNATURES = {
+  major: {
+    c: 0,
+    g: 1,
+    d: 2,
+    a: 3,
+    e: 4,
+    b: 5,
+    fs: 6,
+    cs: 7,
+    f: -1,
+    bb: -2,
+    eb: -3,
+    ab: -4,
+    db: -5,
+    gb: -6,
+    cb: -7,
+  },
+  minor: {
+    a: 0,
+    e: 1,
+    b: 2,
+    fs: 3,
+    cs: 4,
+    gs: 5,
+    ds: 6,
+    as: 7,
+    d: -1,
+    g: -2,
+    c: -3,
+    f: -4,
+    bb: -5,
+    eb: -6,
+    ab: -7,
+  },
+};
+
 const filters = document.querySelector("#filters");
 const tonicSelect = document.querySelector("#tonic");
 const resultTitle = document.querySelector("#result-title");
@@ -145,6 +182,16 @@ function getMode() {
   return MODES[getModeId()] || MODES.major;
 }
 
+function keySignatureText(key, modeId) {
+  const count = KEY_SIGNATURES[modeId]?.[key.id] ?? 0;
+  if (count === 0) return "无";
+  return count > 0 ? `${count}♯` : `${Math.abs(count)}♭`;
+}
+
+function keyDisplayLabel(key, modeId) {
+  return `${key.label}（${keySignatureText(key, modeId)}）`;
+}
+
 function fillTonicOptions(modeId, preferredValue = "all") {
   const keys = MODES[modeId].keys;
   tonicSelect.replaceChildren();
@@ -157,7 +204,7 @@ function fillTonicOptions(modeId, preferredValue = "all") {
   for (const key of keys) {
     const option = document.createElement("option");
     option.value = key.id;
-    option.textContent = key.label;
+    option.textContent = keyDisplayLabel(key, modeId);
     tonicSelect.append(option);
   }
 
@@ -234,14 +281,33 @@ function escapeXml(text) {
     .replace(/"/g, "&quot;");
 }
 
+function markerStyleForSemitone(semitone, label) {
+  const longLabelAdjust = label.length > 2 ? 0.7 : 0;
+
+  if (semitone >= 19) {
+    return { radius: 5.8, fontSize: 6.2 - longLabelAdjust, textOffset: 2.1 };
+  }
+
+  if (semitone >= 14) {
+    return { radius: 6.8, fontSize: 7 - longLabelAdjust, textOffset: 2.4 };
+  }
+
+  if (semitone >= 9) {
+    return { radius: 8.2, fontSize: 7.9 - longLabelAdjust, textOffset: 2.7 };
+  }
+
+  return { radius: 10.5, fontSize: 9.5 - longLabelAdjust, textOffset: 3.2 };
+}
+
 function makeFingerboardSvg(key, keyIndex, mode, maxSemitone, scaleLength) {
+  const modeId = getModeId();
   const scale = buildScale(key, mode);
   const scaleMap = scaleByPitchClass(scale);
   const width = 420;
   const top = 112;
   const stringGap = 62;
   const left = 116;
-  const boardHeight = 620;
+  const boardHeight = 780;
   const bridgeY = top + boardHeight;
   const fingerboardEndY = top + (FINGERBOARD_LENGTH_DEFAULT / scaleLength) * boardHeight;
   const height = bridgeY + 44;
@@ -260,31 +326,21 @@ function makeFingerboardSvg(key, keyIndex, mode, maxSemitone, scaleLength) {
 
   const parts = [];
   parts.push(`<svg class="fingerboard-svg" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" role="img">`);
-  parts.push(`<title>${escapeXml(key.label)}${mode.label}小提琴指板公式图</title>`);
+  parts.push(`<title>${escapeXml(keyDisplayLabel(key, modeId))}${mode.label}小提琴指板公式图</title>`);
   parts.push(`<rect x="0" y="0" width="${width}" height="${height}" rx="18" fill="#fffdf6"/>`);
   parts.push(`<rect x="${boardLeft}" y="${boardTop}" width="${boardRight - boardLeft}" height="${boardBottom - boardTop}" rx="28" fill="#2a211d"/>`);
   parts.push(`<rect x="${boardLeft + 8}" y="${boardTop + 8}" width="${boardRight - boardLeft - 16}" height="${boardBottom - boardTop - 16}" rx="21" fill="#3b2c25"/>`);
   parts.push(`<line x1="${boardLeft + 12}" y1="${top}" x2="${boardRight - 12}" y2="${top}" stroke="#f4ead9" stroke-width="9" stroke-linecap="round"/>`);
   parts.push(`<line x1="${boardLeft + 16}" y1="${fingerboardEndY.toFixed(2)}" x2="${boardRight - 16}" y2="${fingerboardEndY.toFixed(2)}" stroke="#1c1512" stroke-width="5" stroke-linecap="round"/>`);
-  parts.push(`<text x="${boardRight + 8}" y="${(fingerboardEndY + 4).toFixed(2)}" text-anchor="start" font-size="12" font-weight="900" fill="#4b3d32">指板末端</text>`);
+  parts.push(`<text x="${boardLeft - 18}" y="${(boardTop + (boardBottom - boardTop) / 2).toFixed(2)}" text-anchor="middle" font-size="13" font-weight="900" fill="#4b3d32" transform="rotate(-90 ${boardLeft - 18} ${(boardTop + (boardBottom - boardTop) / 2).toFixed(2)})">指板</text>`);
   parts.push(`<line x1="${boardLeft + 10}" y1="${bridgeY}" x2="${boardRight - 10}" y2="${bridgeY}" stroke="#d9a45f" stroke-width="10" stroke-linecap="round"/>`);
   parts.push(`<text x="${boardRight + 8}" y="${bridgeY + 4}" text-anchor="start" font-size="13" font-weight="900" fill="#8a5a20">琴码</text>`);
-  parts.push(`<line x1="48" y1="${top}" x2="48" y2="${bridgeY}" stroke="#0b7887" stroke-width="2"/>`);
-  parts.push(`<line x1="42" y1="${top}" x2="54" y2="${top}" stroke="#0b7887" stroke-width="2"/>`);
-  parts.push(`<line x1="42" y1="${bridgeY}" x2="54" y2="${bridgeY}" stroke="#0b7887" stroke-width="2"/>`);
-  parts.push(`<text x="36" y="${top + boardHeight / 2}" text-anchor="middle" font-size="13" font-weight="900" fill="#0b7887" transform="rotate(-90 36 ${top + boardHeight / 2})">L0 = ${scaleLength} mm</text>`);
-  parts.push(`<text x="74" y="${(top + (fingerboardEndY - top) / 2).toFixed(2)}" text-anchor="middle" font-size="12" font-weight="800" fill="#4b3d32" transform="rotate(-90 74 ${(top + (fingerboardEndY - top) / 2).toFixed(2)})">指板约 ${FINGERBOARD_LENGTH_DEFAULT} mm</text>`);
-  parts.push(`<text x="48" y="${top - 14}" text-anchor="middle" font-size="12" font-weight="800" fill="#6a5a4d">上枕</text>`);
-
   for (let semitone = 0; semitone <= maxSemitone; semitone += 1) {
     const y = yFor(semitone);
     const strong = semitone % 12 === 0;
     parts.push(
       `<line x1="${boardLeft + 14}" y1="${y.toFixed(2)}" x2="${boardRight - 14}" y2="${y.toFixed(2)}" stroke="#f8efe2" stroke-opacity="${strong ? 0.34 : 0.15}" stroke-width="${strong ? 2 : 1}"/>`
     );
-    if (semitone % 12 === 0) {
-      parts.push(`<text x="${boardLeft - 18}" y="${(y + 4).toFixed(2)}" text-anchor="middle" font-size="13" font-weight="700" fill="#6a5a4d">${semitone}</text>`);
-    }
   }
 
   for (const line of FINGER_LINES) {
@@ -312,8 +368,7 @@ function makeFingerboardSvg(key, keyIndex, mode, maxSemitone, scaleLength) {
     for (const marker of markers) {
       const y = yFor(marker.semitone);
       const isTonic = marker.degree === 1;
-      const radius = maxSemitone > 17 ? 9.5 : 12.5;
-      const labelSize = marker.label.length > 2 ? 8.5 : 10.5;
+      const markerStyle = markerStyleForSemitone(marker.semitone, marker.label);
       const fill = isTonic ? "#14191f" : keyColor;
       const text = isTonic ? "#ffffff" : "#fffdf6";
 
@@ -322,21 +377,22 @@ function makeFingerboardSvg(key, keyIndex, mode, maxSemitone, scaleLength) {
         `<title>${escapeXml(`${string.name}弦 ${marker.label}，音级${marker.degree}，n=${marker.semitone}，距上枕 ${marker.distanceMm.toFixed(1)} mm`)}</title>`
       );
       parts.push(
-        `<circle cx="${x}" cy="${y.toFixed(2)}" r="${radius}" fill="${fill}" stroke="#fff7ec" stroke-width="2.2"/>`
+        `<circle cx="${x}" cy="${y.toFixed(2)}" r="${markerStyle.radius}" fill="${fill}" stroke="#fff7ec" stroke-width="1.8"/>`
       );
       parts.push(
-        `<text x="${x}" y="${(y + 3.4).toFixed(2)}" text-anchor="middle" font-size="${labelSize}" font-weight="900" fill="${text}">${escapeXml(marker.label)}</text>`
+        `<text x="${x}" y="${(y + markerStyle.textOffset).toFixed(2)}" text-anchor="middle" font-size="${markerStyle.fontSize.toFixed(1)}" font-weight="900" fill="${text}">${escapeXml(marker.label)}</text>`
       );
       parts.push(`</g>`);
     }
   }
 
-  parts.push(`<text x="28" y="28" font-size="18" font-weight="900" fill="#16202a">${escapeXml(key.label)} ${mode.label}</text>`);
+  parts.push(`<text x="28" y="28" font-size="18" font-weight="900" fill="#16202a">${escapeXml(keyDisplayLabel(key, modeId))} ${mode.label}</text>`);
   parts.push("</svg>");
   return parts.join("");
 }
 
 function makeCard(key, keyIndex, mode, maxSemitone, scaleLength) {
+  const modeId = getModeId();
   const scale = buildScale(key, mode);
   const card = document.createElement("article");
   card.className = "diagram-card formula-card";
@@ -345,7 +401,7 @@ function makeCard(key, keyIndex, mode, maxSemitone, scaleLength) {
   header.className = "formula-card-head";
 
   const title = document.createElement("h3");
-  title.textContent = `${key.label} ${mode.label}`;
+  title.textContent = `${keyDisplayLabel(key, modeId)} ${mode.label}`;
 
   const scaleLine = document.createElement("p");
   scaleLine.textContent = scale.map((note) => note.label).join(" ");
@@ -390,7 +446,7 @@ lightbox.addEventListener("click", (event) => {
 function openLightbox(key, keyIndex, mode, maxSemitone, scaleLength) {
   const media = lightbox.querySelector(".lightbox-media");
   media.innerHTML = makeFingerboardSvg(key, keyIndex, mode, maxSemitone, scaleLength);
-  lightbox.querySelector("figcaption").textContent = `${key.label} ${mode.label}`;
+  lightbox.querySelector("figcaption").textContent = `${keyDisplayLabel(key, getModeId())} ${mode.label}`;
   lightbox.showModal();
 }
 
@@ -403,7 +459,7 @@ function render() {
 
   resultTitle.textContent = tonicSelect.value === "all"
     ? `全部调 ${mode.label}`
-    : `${keys[0]?.label || ""} ${mode.label}`;
+    : `${keys[0] ? keyDisplayLabel(keys[0], modeId) : ""} ${mode.label}`;
   formulaNote.textContent = "完整指板";
   results.dataset.layout = keys.length === 1 ? "single" : "multi";
   results.replaceChildren(...keys.map((key, index) => makeCard(key, index, mode, maxSemitone, scaleLength)));
