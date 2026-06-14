@@ -420,12 +420,8 @@ function makeCard(key, keyIndex, mode, maxSemitone, scaleLength) {
     }
   });
 
-  const meta = document.createElement("p");
-  meta.className = "formula-meta";
-  meta.textContent = "";
-
   header.append(title, scaleLine);
-  card.append(header, media, meta);
+  card.append(header, media);
   return card;
 }
 
